@@ -26,6 +26,8 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 
+from torch.utils.tensorboard import SummaryWriter
+
 
 model_names = sorted(
     name
@@ -197,6 +199,7 @@ def main():
 
 
 def main_worker(gpu, ngpus_per_node, args):
+    writer = SummaryWriter('./')
     global best_acc1
     args.gpu = gpu
 
@@ -391,10 +394,14 @@ def main_worker(gpu, ngpus_per_node, args):
         adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, args)
+        train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
         acc1 = validate(val_loader, model, criterion, args)
+
+        writer.add_scalar('Train/Loss', train_loss, epoch)
+        writer.add_scalar('Train/Acc', train_acc, epoch)
+        writer.add_scalar('Val/Acc', val_acc, epoch)
 
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
@@ -412,6 +419,7 @@ def main_worker(gpu, ngpus_per_node, args):
                     "optimizer": optimizer.state_dict(),
                 },
                 is_best,
+                epoch = epoch+1,
             )
             if epoch == args.start_epoch:
                 sanity_check(model.state_dict(), args.pretrained)
@@ -468,6 +476,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0:
             progress.display(i)
+    
+    return losses.avg, top1.avg
 
 
 def validate(val_loader, model, criterion, args):
@@ -514,10 +524,12 @@ def validate(val_loader, model, criterion, args):
     return top1.avg
 
 
-def save_checkpoint(state, is_best, filename="checkpoint.pth.tar"):
+def save_checkpoint(state, is_best, epoch, filename="checkpoint.pth.tar"):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, "model_best.pth.tar")
+    if epoch % 10 != 0:
+        os.remove(filename)
 
 
 def sanity_check(state_dict, pretrained_weights):
