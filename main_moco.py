@@ -381,8 +381,8 @@ def main_worker(gpu, ngpus_per_node, args):
         loss, acc = train(train_loader, model, criterion, optimizer, epoch, args)
         if acc > best_acc:
             is_best=True
-        writer.add_scalar('Train/Loss', loss, i)
-        writer.add_scalar('Train/Acc', acc, i)
+        writer.add_scalar('Train/Loss', loss, epoch)
+        writer.add_scalar('Train/Acc', acc, epoch)
 
         if not args.multiprocessing_distributed or (
             args.multiprocessing_distributed and args.rank % ngpus_per_node == 0
