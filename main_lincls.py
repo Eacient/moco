@@ -401,7 +401,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
         writer.add_scalar('Train/Loss', train_loss, epoch)
         writer.add_scalar('Train/Acc', train_acc, epoch)
-        writer.add_scalar('Val/Acc', val_acc, epoch)
+        writer.add_scalar('Val/Acc', acc1, epoch)
 
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
