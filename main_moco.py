@@ -30,6 +30,8 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 
+from torch.utils.tensorboard import SummaryWriter
+
 
 model_names = sorted(
     name
@@ -217,6 +219,8 @@ def main():
 
 
 def main_worker(gpu, ngpus_per_node, args):
+    writer = SummaryWriter('./')
+    
     args.gpu = gpu
 
     # suppress printing if not master
@@ -366,13 +370,19 @@ def main_worker(gpu, ngpus_per_node, args):
         drop_last=True,
     )
 
+    best_acc = -1
     for epoch in range(args.start_epoch, args.epochs):
+        is_best = False
         if args.distributed:
             train_sampler.set_epoch(epoch)
         adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, args)
+        loss, acc = train(train_loader, model, criterion, optimizer, epoch, args)
+        if acc > best_acc:
+            is_best=True
+        writer.add_scalar('Train/Loss', loss, i)
+        writer.add_scalar('Train/Acc', acc, i)
 
         if not args.multiprocessing_distributed or (
             args.multiprocessing_distributed and args.rank % ngpus_per_node == 0
@@ -384,7 +394,8 @@ def main_worker(gpu, ngpus_per_node, args):
                     "state_dict": model.state_dict(),
                     "optimizer": optimizer.state_dict(),
                 },
-                is_best=False,
+                is_best=is_best,
+                epoch = epoch + 1,
                 filename="checkpoint_{:04d}.pth.tar".format(epoch),
             )
 
@@ -435,12 +446,16 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0:
             progress.display(i)
+    return losses.avg, acc1.avg
 
 
-def save_checkpoint(state, is_best, filename="checkpoint.pth.tar"):
+def save_checkpoint(state, is_best, epoch, filename="checkpoint.pth.tar"):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, "model_best.pth.tar")
+    if epoch % 10 != 0:
+        os.remove(filename)
+        
 
 
 class AverageMeter:
