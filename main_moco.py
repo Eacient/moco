@@ -446,7 +446,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0:
             progress.display(i)
-    return losses.avg, acc1.avg
+    return losses.avg, top1.avg
 
 
 def save_checkpoint(state, is_best, epoch, filename="checkpoint.pth.tar"):
