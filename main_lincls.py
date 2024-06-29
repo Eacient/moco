@@ -156,6 +156,10 @@ parser.add_argument(
     "--pretrained", default="", type=str, help="path to moco pretrained checkpoint"
 )
 
+parser.add_argument(
+    "--sup", default="", type=str
+)
+
 best_acc1 = 0
 
 
@@ -238,6 +242,13 @@ def main_worker(gpu, ngpus_per_node, args):
     # init the fc layer
     model.fc.weight.data.normal_(mean=0.0, std=0.01)
     model.fc.bias.data.zero_()
+
+    if args.sup:
+        state_dict = torch.load(args.sup, map_location="cpu")
+        msg = model.load_state_dict(state_dict, strict=False)
+        assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}
+        print("=> loaded sup-pre-trained model '{}'".format(args.sup))
+        
 
     # load from pre-trained, before DistributedDataParallel constructor
     if args.pretrained:
