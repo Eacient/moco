@@ -160,6 +160,10 @@ parser.add_argument(
     "--sup", default="", type=str
 )
 
+parser.add_argument(
+    "--num_classes", default="100", type=int
+)
+
 best_acc1 = 0
 
 
@@ -233,7 +237,7 @@ def main_worker(gpu, ngpus_per_node, args):
         )
     # create model
     print("=> creating model '{}'".format(args.arch))
-    model = models.__dict__[args.arch]()
+    model = models.__dict__[args.arch](num_classes=args.num_classes)
 
     # freeze all layers but the last fc
     for name, param in model.named_parameters():
